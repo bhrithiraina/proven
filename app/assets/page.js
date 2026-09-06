@@ -1,4 +1,9 @@
-export default function Assets() {
+"use client";
+
+import { useState } from "react";
+
+export default function AssetsPage() {
+    const [search, setSearch] = useState("");
   const assets = [
     {
       id: "PRV-8F42A",
@@ -41,6 +46,11 @@ export default function Assets() {
       updated: "Yesterday",
     },
   ];
+  const filteredAssets = assets.filter((asset) =>
+  `${asset.id} ${asset.name} ${asset.category}`
+    .toLowerCase()
+    .includes(search.toLowerCase())
+);
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -123,8 +133,11 @@ export default function Assets() {
             <input
               type="text"
               placeholder="Search assets or PROVEN ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-blue-400 md:max-w-md"
             />
+           
 
             <button className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm text-slate-300 hover:bg-white/5">
               All statuses
@@ -146,7 +159,7 @@ export default function Assets() {
             </div>
 
             <div className="divide-y divide-white/10">
-              {assets.map((asset) => (
+              {filteredAssets.map((asset) => (
                 <a
                   href={`/assets/${asset.id}`}
                   key={asset.id}
