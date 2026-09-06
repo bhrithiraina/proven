@@ -4,6 +4,8 @@ import { useState } from "react";
 
 export default function AssetsPage() {
     const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
+    const [categoryFilter, setCategoryFilter] = useState("All");
   const assets = [
     {
       id: "PRV-8F42A",
@@ -46,11 +48,19 @@ export default function AssetsPage() {
       updated: "Yesterday",
     },
   ];
-  const filteredAssets = assets.filter((asset) =>
-  `${asset.id} ${asset.name} ${asset.category}`
+ const filteredAssets = assets.filter((asset) => {
+  const matchesSearch = `${asset.id} ${asset.name} ${asset.category}`
     .toLowerCase()
-    .includes(search.toLowerCase())
-);
+    .includes(search.toLowerCase());
+
+  const matchesStatus =
+    statusFilter === "All" || asset.status === statusFilter;
+
+  const matchesCategory =
+    categoryFilter === "All" || asset.category === categoryFilter;
+
+  return matchesSearch && matchesStatus && matchesCategory;
+});
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -139,13 +149,29 @@ export default function AssetsPage() {
             />
            
 
-            <button className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm text-slate-300 hover:bg-white/5">
-              All statuses
-            </button>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm text-slate-300 outline-none"
+            >
+              <option value="All">All statuses</option>
+              <option value="Active">Active</option>
+              <option value="Rented">Rented</option>
+              <option value="Maintenance">Maintenance</option>
+              <option value="Needs attention">Needs attention</option>
+            </select>
 
-            <button className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm text-slate-300 hover:bg-white/5">
-              All categories
-            </button>
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="rounded-xl border border-white/10 bg-slate-900 px-5 py-3 text-sm text-slate-300 outline-none"
+            >
+              <option value="All">All categories</option>
+              <option value="Camera">Camera</option>
+              <option value="Stabilizer">Stabilizer</option>
+              <option value="Computer">Computer</option>
+              <option value="Audio">Audio</option>
+            </select>
           </div>
 
           {/* Asset table */}
