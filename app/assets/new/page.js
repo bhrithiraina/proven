@@ -17,7 +17,16 @@ export default function NewAssetPage() {
     updated: "Just now",
   };
 
-  localStorage.setItem("proven-new-asset", JSON.stringify(newAsset));
+  const existingAssets = JSON.parse(
+    localStorage.getItem("proven-assets") || "[]"
+  );
+
+  existingAssets.push(newAsset);
+
+  localStorage.setItem(
+     "proven-assets",
+      JSON.stringify(existingAssets)
+  );
 
   window.location.href = "/assets";
 };

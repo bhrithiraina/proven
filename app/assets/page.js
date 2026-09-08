@@ -6,13 +6,13 @@ export default function AssetsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [categoryFilter, setCategoryFilter] = useState("All");
-    const [savedAsset, setSavedAsset] = useState(null);
+    const [savedAssets, setSavedAssets] = useState([]);
 
     useEffect(() => {
-  const storedAsset = localStorage.getItem("proven-new-asset");
+  const storedAssets = localStorage.getItem("proven-assets");
 
-  if (storedAsset) {
-    setSavedAsset(JSON.parse(storedAsset));
+  if (storedAssets) {
+    setSavedAssets(JSON.parse(storedAssets));
   }
 }, []);
 
@@ -58,8 +58,8 @@ export default function AssetsPage() {
       updated: "Yesterday",
     },
   ];
-  const allAssets = savedAsset ? [savedAsset, ...assets] : assets;
-  
+  const allAssets = [...savedAssets, ...assets];
+
   const filteredAssets = allAssets.filter((asset) => {
   const matchesSearch = `${asset.id} ${asset.name} ${asset.category}`
     .toLowerCase()
@@ -133,7 +133,10 @@ export default function AssetsPage() {
             <h1 className="mt-1 text-2xl font-bold">Assets</h1>
           </div>
 
-          <button className="rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold hover:bg-blue-400">
+          <button
+            onClick={() => (window.location.href = "/assets/new")}
+            className="rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold hover:bg-blue-400"
+          >
             + Add asset
           </button>
         </header>

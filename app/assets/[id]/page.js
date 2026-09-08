@@ -1,5 +1,43 @@
-export default async function AssetDetail({ params }) {
-  const { id } = await params;
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+
+export default function AssetDetail() {
+  const params = useParams();
+  const id = params.id;
+
+  const [asset, setAsset] = useState(null);
+
+  useEffect(() => {
+    const storedAssets = localStorage.getItem("proven-assets");
+
+    if (storedAssets) {
+      const parsedAssets = JSON.parse(storedAssets);
+
+      const matchingAsset = parsedAssets.find(
+        (storedAsset) => storedAsset.id === id
+      );
+
+      if (matchingAsset) {
+        setAsset(matchingAsset);
+      }
+    }
+  }, [id]);
+
+  const demoAsset = {
+    id,
+    name: "Canon EOS R6",
+    category: "Camera",
+    condition: "Good",
+    status: "Active",
+    manufacturer: "Canon",
+    model: "EOS R6",
+    serialNumber: "R6X-2026-8842",
+    created: "28 Aug 2026",
+  };
+
+  const currentAsset = asset || demoAsset;
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -55,7 +93,6 @@ export default async function AssetDetail({ params }) {
 
       {/* Main */}
       <section className="md:ml-64">
-        {/* Header */}
         <header className="border-b border-white/10 px-6 py-5 md:px-10">
           <a
             href="/assets"
@@ -79,21 +116,24 @@ export default async function AssetDetail({ params }) {
                 </p>
 
                 <h1 className="mt-1 text-3xl font-bold">
-                  {id}
+                  {currentAsset.id}
                 </h1>
 
                 <p className="mt-2 text-lg text-slate-400">
-                  Canon EOS R6
+                  {currentAsset.name}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
               <span className="rounded-lg bg-emerald-400/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
-                Active
+                {currentAsset.status}
               </span>
 
-              <button className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5">
+              <button
+                onClick={() => (window.location.href = `/assets/${id}/edit`)}
+                className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-white/5"
+              >
                 Edit asset
               </button>
             </div>
@@ -107,11 +147,11 @@ export default async function AssetDetail({ params }) {
               </p>
 
               <p className="mt-3 text-2xl font-bold">
-                Good
+                {currentAsset.condition}
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
-                Last inspected 2 Sep 2026
+                Current asset condition
               </p>
             </div>
 
@@ -121,11 +161,11 @@ export default async function AssetDetail({ params }) {
               </p>
 
               <p className="mt-3 text-2xl font-bold">
-                Camera
+                {currentAsset.category}
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
-                Photography equipment
+                Asset category
               </p>
             </div>
 
@@ -135,7 +175,7 @@ export default async function AssetDetail({ params }) {
               </p>
 
               <p className="mt-3 text-2xl font-bold">
-                28 Aug 2026
+                {currentAsset.created || "Just now"}
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
@@ -160,99 +200,52 @@ export default async function AssetDetail({ params }) {
 
               <div className="p-6">
                 <div className="space-y-8">
-                  {/* Event 1 */}
                   <div className="flex gap-4">
                     <div className="flex flex-col items-center">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
-                        R
+                        +
                       </div>
-
-                      <div className="mt-2 h-full w-px bg-white/10" />
-                    </div>
-
-                    <div className="pb-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="font-semibold">
-                          Returned
-                        </h3>
-
-                        <span className="text-xs text-slate-500">
-                          05 Sep 2026 · 10:42 AM
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-400">
-                        Asset returned after rental period.
-                        Minor scratch recorded during inspection.
-                      </p>
-
-                      <button className="mt-3 text-sm text-blue-400 hover:text-blue-300">
-                        View evidence →
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Event 2 */}
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
-                        R
-                      </div>
-
-                      <div className="mt-2 h-full w-px bg-white/10" />
-                    </div>
-
-                    <div className="pb-2">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="font-semibold">
-                          Rented
-                        </h3>
-
-                        <span className="text-xs text-slate-500">
-                          02 Sep 2026 · 09:15 AM
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-400">
-                        Asset checked and condition verified
-                        before being handed to the customer.
-                      </p>
-
-                      <button className="mt-3 text-sm text-blue-400 hover:text-blue-300">
-                        View evidence →
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Event 3 */}
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
-                        S
-                      </div>
-
-                      <div className="mt-2 h-full w-px bg-white/10" />
                     </div>
 
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
                         <h3 className="font-semibold">
-                          Serviced
+                          Asset registered
                         </h3>
 
                         <span className="text-xs text-slate-500">
-                          28 Aug 2026 · 02:30 PM
+                          Just now
                         </span>
                       </div>
 
                       <p className="mt-2 text-sm leading-6 text-slate-400">
-                        Routine maintenance completed.
-                        Camera functions tested and verified.
+                        Asset identity created and registered in PROVEN.
                       </p>
+                    </div>
+                  </div>
 
-                      <button className="mt-3 text-sm text-blue-400 hover:text-blue-300">
-                        View service record →
-                      </button>
+                  <div className="flex gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
+                        I
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="font-semibold">
+                          Initial condition recorded
+                        </h3>
+
+                        <span className="text-xs text-slate-500">
+                          Just now
+                        </span>
+                      </div>
+
+                      <p className="mt-2 text-sm leading-6 text-slate-400">
+                        Initial asset information was recorded when the asset
+                        was created.
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -271,48 +264,18 @@ export default async function AssetDetail({ params }) {
                 </p>
               </div>
 
-              <div className="mt-6 space-y-3">
-                <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-                  <p className="text-sm font-medium">
-                    Return inspection
-                  </p>
+              <div className="mt-6 rounded-xl border border-white/10 bg-slate-950 p-4">
+                <p className="text-sm font-medium">
+                  Asset registration
+                </p>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    05 Sep 2026
-                  </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Initial record
+                </p>
 
-                  <p className="mt-3 text-sm text-blue-400">
-                    3 photos attached
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-                  <p className="text-sm font-medium">
-                    Pre-rental inspection
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    02 Sep 2026
-                  </p>
-
-                  <p className="mt-3 text-sm text-blue-400">
-                    4 photos attached
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-slate-950 p-4">
-                  <p className="text-sm font-medium">
-                    Service record
-                  </p>
-
-                  <p className="mt-1 text-xs text-slate-500">
-                    28 Aug 2026
-                  </p>
-
-                  <p className="mt-3 text-sm text-blue-400">
-                    1 document attached
-                  </p>
-                </div>
+                <p className="mt-3 text-sm text-blue-400">
+                  No files attached
+                </p>
               </div>
 
               <button className="mt-5 w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5">
@@ -334,7 +297,7 @@ export default async function AssetDetail({ params }) {
                 </p>
 
                 <p className="mt-2 text-sm font-medium">
-                  Canon
+                  {currentAsset.manufacturer || "Not provided"}
                 </p>
               </div>
 
@@ -344,7 +307,7 @@ export default async function AssetDetail({ params }) {
                 </p>
 
                 <p className="mt-2 text-sm font-medium">
-                  EOS R6
+                  {currentAsset.model || currentAsset.name}
                 </p>
               </div>
 
@@ -354,7 +317,7 @@ export default async function AssetDetail({ params }) {
                 </p>
 
                 <p className="mt-2 text-sm font-medium">
-                  R6X-2026-8842
+                  {currentAsset.serialNumber || "Not provided"}
                 </p>
               </div>
 
@@ -364,7 +327,7 @@ export default async function AssetDetail({ params }) {
                 </p>
 
                 <p className="mt-2 text-sm font-medium">
-                  {id}
+                  {currentAsset.id}
                 </p>
               </div>
             </div>
