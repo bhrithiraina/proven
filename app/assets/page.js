@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AssetsPage() {
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [categoryFilter, setCategoryFilter] = useState("All");
+    const [savedAsset, setSavedAsset] = useState(null);
+
+    useEffect(() => {
+  const storedAsset = localStorage.getItem("proven-new-asset");
+
+  if (storedAsset) {
+    setSavedAsset(JSON.parse(storedAsset));
+  }
+}, []);
+
   const assets = [
     {
       id: "PRV-8F42A",
@@ -48,7 +58,9 @@ export default function AssetsPage() {
       updated: "Yesterday",
     },
   ];
- const filteredAssets = assets.filter((asset) => {
+  const allAssets = savedAsset ? [savedAsset, ...assets] : assets;
+  
+  const filteredAssets = allAssets.filter((asset) => {
   const matchesSearch = `${asset.id} ${asset.name} ${asset.category}`
     .toLowerCase()
     .includes(search.toLowerCase());

@@ -7,6 +7,21 @@ export default function NewAssetPage() {
   const [category, setCategory] = useState("Camera");
   const [condition, setCondition] = useState("Good");
   const [status, setStatus] = useState("Active");
+  const handleCreateAsset = () => {
+  const newAsset = {
+    id: `PRV-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
+    name,
+    category,
+    condition,
+    status,
+    updated: "Just now",
+  };
+
+  localStorage.setItem("proven-new-asset", JSON.stringify(newAsset));
+
+  window.location.href = "/assets";
+};
+  
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -113,6 +128,7 @@ export default function NewAssetPage() {
 
               <button
                 type="button"
+                onClick={handleCreateAsset}
                 className="rounded-xl bg-blue-500 px-5 py-3 text-sm font-semibold hover:bg-blue-400"
               >
                 Create asset
