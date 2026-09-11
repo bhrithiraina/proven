@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { supabase } from "../../../../lib/supabase";
 
 export default function EditAssetPage() {
   const params = useParams();
@@ -14,53 +15,109 @@ export default function EditAssetPage() {
   const [status, setStatus] = useState("Active");
 
   useEffect(() => {
-    const storedAssets = localStorage.getItem("proven-assets");
+    const loadAsset = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (storedAssets) {
-      const assets = JSON.parse(storedAssets);
-
-      const foundAsset = assets.find(
-        (storedAsset) => storedAsset.id === id
-      );
-
-      if (foundAsset) {
-        setAsset(foundAsset);
-        setName(foundAsset.name);
-        setCategory(foundAsset.category);
-        setCondition(foundAsset.condition);
-        setStatus(foundAsset.status);
+      if (!user) {
+        window.location.href = "/login";
+        return;
       }
-    }
+
+      const { data, error } = await supabase
+        .from("assets")
+        .select("*")
+        .eq("proven_id", id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setAsset(data);
+      setName(data.name);
+      setCategory(data.category);
+      setCondition(data.condition);
+      setStatus(data.status);
+    };
+
+    loadAsset();
   }, [id]);
 
-  const handleSave = () => {
-    const storedAssets = localStorage.getItem("proven-assets");
-
-    if (!storedAssets) {
+  const handleSave = async () => {
+    if (!name.trim()) {
+      alert("Please enter an asset name.");
       return;
     }
 
-    const assets = JSON.parse(storedAssets);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    const updatedAssets = assets.map((storedAsset) => {
-      if (storedAsset.id === id) {
-        return {
-          ...storedAsset,
-          name,
-          category,
-          condition,
-          status,
-          updated: "Just now",
-        };
+    if (!user) {
+      alert("Please sign in first.");
+      window.location.href = "/login";
+      return;
+    }
+
+    // Check what changed before updating
+    const conditionChanged = asset.condition !== condition;
+    const statusChanged = asset.status !== status;
+
+    const { error } = await supabase
+      .from("assets")
+      .update({
+        name: name.trim(),
+        category,
+        condition,
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("proven_id", id)
+      .eq("user_id", user.id);
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    // Record condition change
+    if (conditionChanged) {
+      const { error: eventError } = await supabase
+        .from("asset_events")
+        .insert({
+          asset_id: asset.id,
+          user_id: user.id,
+          event_type: "condition_update",
+          title: "Condition updated",
+          description: `Condition changed from ${asset.condition} to ${condition}.`,
+        });
+
+      if (eventError) {
+        console.error(eventError);
       }
+    }
 
-      return storedAsset;
-    });
+    // Record status change
+    if (statusChanged) {
+      const { error: eventError } = await supabase
+        .from("asset_events")
+        .insert({
+          asset_id: asset.id,
+          user_id: user.id,
+          event_type: "status_update",
+          title: "Status updated",
+          description: `Status changed from ${asset.status} to ${status}.`,
+        });
 
-    localStorage.setItem(
-      "proven-assets",
-      JSON.stringify(updatedAssets)
-    );
+      if (eventError) {
+        console.error(eventError);
+      }
+    }
 
     window.location.href = `/assets/${id}`;
   };
@@ -100,7 +157,7 @@ export default function EditAssetPage() {
           </p>
 
           <h1 className="mt-2 text-3xl font-bold">
-            {asset.id}
+            {asset.proven_id}
           </h1>
 
           <p className="mt-2 text-slate-400">

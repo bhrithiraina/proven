@@ -2,42 +2,169 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { supabase } from "../../../lib/supabase";
 
 export default function AssetDetail() {
   const params = useParams();
   const id = params.id;
 
   const [asset, setAsset] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [evidence, setEvidence] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
-    const storedAssets = localStorage.getItem("proven-assets");
+    const loadAsset = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (storedAssets) {
-      const parsedAssets = JSON.parse(storedAssets);
-
-      const matchingAsset = parsedAssets.find(
-        (storedAsset) => storedAsset.id === id
-      );
-
-      if (matchingAsset) {
-        setAsset(matchingAsset);
+      if (!user) {
+        window.location.href = "/login";
+        return;
       }
-    }
+
+      const { data, error } = await supabase
+        .from("assets")
+        .select("*")
+        .eq("proven_id", id)
+        .eq("user_id", user.id)
+        .single();
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setAsset(data);
+      
+      const { data: eventData, error: eventError } = await supabase
+        .from("asset_events")
+        .select("*")
+        .eq("asset_id", data.id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (eventError) {
+        console.error(eventError);
+        return;
+      }
+
+      const { data: evidenceData, error: evidenceError } = await supabase
+        .from("asset_evidence")
+        .select("*")
+        .eq("asset_id", data.id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (evidenceError) {
+        console.error(evidenceError);
+        return;
+      }
+
+      setEvidence(evidenceData || []);
+
+      setEvents(eventData || []);
+    };
+
+    loadAsset();
   }, [id]);
 
-  const demoAsset = {
-    id,
-    name: "Canon EOS R6",
-    category: "Camera",
-    condition: "Good",
-    status: "Active",
-    manufacturer: "Canon",
-    model: "EOS R6",
-    serialNumber: "R6X-2026-8842",
-    created: "28 Aug 2026",
-  };
+  if (!asset) {
+    return (
+      <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+        <p className="text-slate-400">Loading asset...</p>
+      </main>
+    );
+  }
 
-  const currentAsset = asset || demoAsset;
+const currentAsset = asset;
+
+  const handleAddEvidence = async (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image.");
+      return;
+    }
+
+    setUploading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert("Please sign in first.");
+        window.location.href = "/login";
+        return;
+      }
+
+      const fileExtension = file.name.split(".").pop();
+
+      const filePath = `${user.id}/${currentAsset.id}/${crypto.randomUUID()}.${fileExtension}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("evidence")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error(uploadError);
+        alert(uploadError.message);
+        return;
+      }
+
+      const { error: evidenceError } = await supabase
+        .from("asset_evidence")
+        .insert({
+          asset_id: currentAsset.id,
+          user_id: user.id,
+          file_name: file.name,
+          file_path: filePath,
+          file_type: file.type,
+        });
+
+      if (evidenceError) {
+        console.error(evidenceError);
+        alert(evidenceError.message);
+        return;
+      }
+
+      const { error: eventError } = await supabase
+        .from("asset_events")
+        .insert({
+          asset_id: currentAsset.id,
+          user_id: user.id,
+          event_type: "evidence",
+          title: "Evidence added",
+          description: `Evidence file added: ${file.name}`,
+        });
+
+      if (eventError) {
+        console.error(eventError);
+      }
+
+      const { data: updatedEvidence, error: reloadError } = await supabase
+        .from("asset_evidence")
+        .select("*")
+        .eq("asset_id", currentAsset.id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (reloadError) {
+        console.error(reloadError);
+        return;
+      }
+
+      setEvidence(updatedEvidence || []);
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  };
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -116,7 +243,7 @@ export default function AssetDetail() {
                 </p>
 
                 <h1 className="mt-1 text-3xl font-bold">
-                  {currentAsset.id}
+                  {currentAsset.proven_id}
                 </h1>
 
                 <p className="mt-2 text-lg text-slate-400">
@@ -175,7 +302,7 @@ export default function AssetDetail() {
               </p>
 
               <p className="mt-3 text-2xl font-bold">
-                {currentAsset.created || "Just now"}
+                {new Date(currentAsset.created_at).toLocaleDateString()}
               </p>
 
               <p className="mt-2 text-sm text-slate-500">
@@ -200,55 +327,40 @@ export default function AssetDetail() {
 
               <div className="p-6">
                 <div className="space-y-8">
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
-                        +
+                  {events.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No lifecycle events recorded yet.
+                    </p>
+                  ) : (
+                    events.map((event) => (
+                      <div className="flex gap-4" key={event.id}>
+                        <div className="flex flex-col items-center">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
+                            +
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="font-semibold">
+                              {event.title}
+                            </h3>
+
+                            <span className="text-xs text-slate-500">
+                              {new Date(event.created_at).toLocaleString()}
+                            </span>
+                          </div>
+
+                          {event.description && (
+                            <p className="mt-2 text-sm leading-6 text-slate-400">
+                              {event.description}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="font-semibold">
-                          Asset registered
-                        </h3>
-
-                        <span className="text-xs text-slate-500">
-                          Just now
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-400">
-                        Asset identity created and registered in PROVEN.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <div className="flex flex-col items-center">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-500/10 text-sm font-semibold text-blue-400">
-                        I
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="font-semibold">
-                          Initial condition recorded
-                        </h3>
-
-                        <span className="text-xs text-slate-500">
-                          Just now
-                        </span>
-                      </div>
-
-                      <p className="mt-2 text-sm leading-6 text-slate-400">
-                        Initial asset information was recorded when the asset
-                        was created.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                    ))
+                  )}
+                </div>    
               </div>
             </div>
 
@@ -264,23 +376,35 @@ export default function AssetDetail() {
                 </p>
               </div>
 
-              <div className="mt-6 rounded-xl border border-white/10 bg-slate-950 p-4">
-                <p className="text-sm font-medium">
-                  Asset registration
-                </p>
+              {evidence.length === 0 ? (
+                <div className="mt-6 rounded-xl border border-white/10 bg-slate-950 p-4">
+                  <p className="text-sm font-medium">
+                    No evidence yet
+                  </p>
 
-                <p className="mt-1 text-xs text-slate-500">
-                  Initial record
-                </p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Add photos or other visual evidence for this asset.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-6 space-y-3">
+                  {evidence.map((item) => (
+                    <EvidenceItem key={item.id} item={item} />
+                  ))}
+                </div>
+              )}
 
-                <p className="mt-3 text-sm text-blue-400">
-                  No files attached
-                </p>
-              </div>
+              <label className="mt-5 flex w-full cursor-pointer items-center justify-center rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5">
+              {uploading ? "Uploading..." : "+ Add evidence"}
 
-              <button className="mt-5 w-full rounded-xl border border-white/10 px-4 py-3 text-sm font-medium text-slate-300 hover:bg-white/5">
-                + Add evidence
-              </button>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAddEvidence}
+                  className="hidden"
+                  disabled={uploading}
+                />
+              </label>
             </div>
           </div>
 
@@ -327,7 +451,7 @@ export default function AssetDetail() {
                 </p>
 
                 <p className="mt-2 text-sm font-medium">
-                  {currentAsset.id}
+                  {currentAsset.proven_id}
                 </p>
               </div>
             </div>
@@ -335,5 +459,52 @@ export default function AssetDetail() {
         </div>
       </section>
     </main>
+  );
+}
+
+function EvidenceItem({ item }) {
+  const [imageUrl, setImageUrl] = useState(null);
+
+  useEffect(() => {
+    const loadImage = async () => {
+      const { data, error } = await supabase.storage
+        .from("evidence")
+        .createSignedUrl(item.file_path, 60 * 60);
+
+      if (error) {
+        console.error(error);
+        return;
+      }
+
+      setImageUrl(data.signedUrl);
+    };
+
+    loadImage();
+  }, [item.file_path]);
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-white/10 bg-slate-950">
+      {imageUrl ? (
+        <img
+          src={imageUrl}
+          alt={item.file_name}
+          className="h-48 w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-48 items-center justify-center text-sm text-slate-500">
+          Loading image...
+        </div>
+      )}
+
+      <div className="p-4">
+        <p className="text-sm font-medium text-white">
+          {item.file_name}
+        </p>
+
+        <p className="mt-1 text-xs text-slate-500">
+          Added {new Date(item.created_at).toLocaleString()}
+        </p>
+      </div>
+    </div>
   );
 }

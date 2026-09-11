@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabase";
 
 export default function AssetsPage() {
     const [search, setSearch] = useState("");
@@ -9,70 +10,48 @@ export default function AssetsPage() {
     const [savedAssets, setSavedAssets] = useState([]);
 
     useEffect(() => {
-  const storedAssets = localStorage.getItem("proven-assets");
+      const loadAssets = async () => {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
-  if (storedAssets) {
-    setSavedAssets(JSON.parse(storedAssets));
-  }
-}, []);
+        if (!user) {
+          window.location.href = "/login";
+          return;
+        }
 
-  const assets = [
-    {
-      id: "PRV-8F42A",
-      name: "Canon EOS R6",
-      category: "Camera",
-      condition: "Good",
-      status: "Active",
-      updated: "12 min ago",
-    },
-    {
-      id: "PRV-31KD7",
-      name: "Sony FX3",
-      category: "Camera",
-      condition: "Excellent",
-      status: "Rented",
-      updated: "1 hr ago",
-    },
-    {
-      id: "PRV-92LM4",
-      name: "DJI RS 3 Pro",
-      category: "Stabilizer",
-      condition: "Good",
-      status: "Maintenance",
-      updated: "3 hrs ago",
-    },
-    {
-      id: "PRV-17QXA",
-      name: "MacBook Pro 16",
-      category: "Computer",
-      condition: "Excellent",
-      status: "Active",
-      updated: "Yesterday",
-    },
-    {
-      id: "PRV-44PL9",
-      name: "Zoom H6",
-      category: "Audio",
-      condition: "Fair",
-      status: "Needs attention",
-      updated: "Yesterday",
-    },
-  ];
-  const allAssets = [...savedAssets, ...assets];
+        const { data, error } = await supabase
+          .from("assets")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error(error);
+          return;
+        } 
+
+        setSavedAssets(data || []);
+      };
+
+      loadAssets();
+    }, []);
+
+  const allAssets = savedAssets;
 
   const filteredAssets = allAssets.filter((asset) => {
-  const matchesSearch = `${asset.id} ${asset.name} ${asset.category}`
-    .toLowerCase()
-    .includes(search.toLowerCase());
+    const matchesSearch = `${asset.proven_id || asset.id} ${asset.name} ${asset.category}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
 
-  const matchesStatus =
-    statusFilter === "All" || asset.status === statusFilter;
+    const matchesStatus =
+      statusFilter === "All" || asset.status === statusFilter;
 
-  const matchesCategory =
-    categoryFilter === "All" || asset.category === categoryFilter;
+    const matchesCategory =
+      categoryFilter === "All" || asset.category === categoryFilter;
 
-  return matchesSearch && matchesStatus && matchesCategory;
-});
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -202,7 +181,7 @@ export default function AssetsPage() {
             <div className="divide-y divide-white/10">
               {filteredAssets.map((asset) => (
                 <a
-                  href={`/assets/${asset.id}`}
+                  href={`/assets/${asset.proven_id || asset.id}`}
                   key={asset.id}
                   className="block px-6 py-5 transition hover:bg-white/[0.03]"
                 >
@@ -220,7 +199,7 @@ export default function AssetsPage() {
                           </p>
 
                           <p className="mt-1 text-xs text-slate-500">
-                            {asset.id}
+                            {asset.proven_id || asset.id}
                           </p>
                         </div>
                       </div>
@@ -281,7 +260,9 @@ export default function AssetsPage() {
 
           {/* Bottom information */}
           <div className="mt-6 flex items-center justify-between text-sm text-slate-500">
-            <span>Showing 5 of 128 assets</span>
+            <span>
+              Showing {filteredAssets.length} of {allAssets.length} assets
+            </span>
 
             <span className="text-blue-400">
               Asset registry

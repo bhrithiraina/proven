@@ -1,36 +1,88 @@
 "use client";
 
 import { useState } from "react";
+import { supabase } from "../../../lib/supabase";
 
 export default function NewAssetPage() {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("Camera");
   const [condition, setCondition] = useState("Good");
   const [status, setStatus] = useState("Active");
-  const handleCreateAsset = () => {
-  const newAsset = {
-    id: `PRV-${Math.random().toString(36).substring(2, 7).toUpperCase()}`,
-    name,
-    category,
-    condition,
-    status,
-    updated: "Just now",
+  const handleCreateAsset = async () => {
+    if (!name.trim()) {
+      alert("Please enter an asset name.");
+      return;
+    }
+
+    const provenId = `PRV-${Math.random()
+      .toString(36)
+      .substring(2, 7)
+      .toUpperCase()}`;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      alert("Please sign in first.");
+      window.location.href = "/login";
+      return;
+    }
+
+    const { data: newAsset, error } = await supabase
+      .from("assets")
+      .insert({
+        user_id: user.id,
+        proven_id: provenId,
+        name: name.trim(),
+        category,
+        condition,
+        status,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error(error);
+      alert(error.message);
+      return;
+    }
+
+    const { error: eventError } = await supabase
+      .from("asset_events")
+      .insert({
+        asset_id: newAsset.id,
+        user_id: user.id,
+        event_type: "registration",
+        title: "Asset registered",
+        description: "Asset identity created and registered in PROVEN.",
+      });
+
+    if (eventError) {
+      console.error(eventError);
+      alert(eventError.message);
+      return;
+    }
+
+    const { error: conditionEventError } = await supabase
+      .from("asset_events")
+      .insert({
+        asset_id: newAsset.id,
+        user_id: user.id,
+        event_type: "condition",
+        title: "Initial condition recorded",
+        description: `Initial condition recorded as ${condition}.`,
+      });
+
+      if (conditionEventError) {
+        console.error(conditionEventError);
+        alert(conditionEventError.message);
+        return;
+      }
+
+    window.location.href = "/assets";
   };
-
-  const existingAssets = JSON.parse(
-    localStorage.getItem("proven-assets") || "[]"
-  );
-
-  existingAssets.push(newAsset);
-
-  localStorage.setItem(
-     "proven-assets",
-      JSON.stringify(existingAssets)
-  );
-
-  window.location.href = "/assets";
-};
-  
+   
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">

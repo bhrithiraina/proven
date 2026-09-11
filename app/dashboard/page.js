@@ -1,4 +1,26 @@
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../../lib/supabase";
+
 export default function Dashboard() {
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
+      }
+    };
+
+    checkUser();
+  }, [router]);
+
   const stats = [
     { label: "Total assets", value: "128" },
     { label: "Active", value: "94" },
@@ -82,8 +104,18 @@ export default function Dashboard() {
         </div>
 
         <div className="absolute bottom-6 left-6 right-6 border-t border-white/10 pt-5">
-          <p className="text-sm font-medium">Demo Workspace</p>
-          <p className="mt-1 text-xs text-slate-500">PROVEN Business</p>
+          <p className="text-sm font-medium">PROVEN Workspace</p>
+          <p className="mt-1 text-xs text-slate-500">Business account</p>
+
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.replace("/login");
+            }}
+            className="mt-4 w-full rounded-xl border border-white/10 px-4 py-2.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+          >
+            Sign out
+          </button>
         </div>
       </aside>
 
@@ -96,7 +128,10 @@ export default function Dashboard() {
             <h1 className="mt-1 text-2xl font-bold">Dashboard</h1>
           </div>
 
-          <button className="rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold hover:bg-blue-400">
+          <button
+            onClick={() => (window.location.href = "/assets/new")}
+            className="rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold hover:bg-blue-400"
+          >
             + Add asset
           </button>
         </header>
@@ -183,7 +218,10 @@ export default function Dashboard() {
               </p>
 
               <div className="mt-6 space-y-3">
-                <button className="w-full rounded-xl bg-blue-500 px-4 py-3 text-left text-sm font-semibold hover:bg-blue-400">
+                <button
+                  onClick={() => (window.location.href = "/assets/new")}
+                  className="w-full rounded-xl bg-blue-500 px-4 py-3 text-left text-sm font-semibold hover:bg-blue-400"
+                >
                   + Create an asset
                 </button>
 
