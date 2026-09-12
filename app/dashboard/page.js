@@ -1,63 +1,128 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 
 export default function Dashboard() {
   const router = useRouter();
+  const [assets, setAssets] = useState([]);
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [assetCount, setAssetCount] = useState(0);
+  const [activeCount, setActiveCount] = useState(0);
+  const [maintenanceCount, setMaintenanceCount] = useState(0);
+  const [attentionCount, setAttentionCount] = useState(0);
+  const [recentAssets, setRecentAssets] = useState([]);
 
-  useEffect(() => {
-    const checkUser = async () => {
+    useEffect(() => {
+      const loadDashboard = async () => {
+        setLoading(true);
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
         router.replace("/login");
+        return;
       }
+
+      // Get all assets for the logged-in user
+      const { data: assetData, error: assetError } = await supabase
+        .from("assets")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (assetError) {
+        console.error("Asset loading error:", assetError);
+        setLoading(false);
+        return;
+      }
+
+      const allAssets = assetData || [];
+
+      setAssets(allAssets);
+
+      // Dashboard statistics
+      setAssetCount(allAssets.length);
+
+      setActiveCount(
+        allAssets.filter(
+          (asset) => asset.status === "Active"
+        ).length
+      );
+
+      setMaintenanceCount(
+        allAssets.filter(
+          (asset) => asset.status === "Maintenance"
+        ).length
+      );
+
+      setAttentionCount(
+        allAssets.filter(
+          (asset) => asset.status === "Needs attention"
+        ).length
+      );
+
+      setRecentAssets(allAssets.slice(0, 3));
+
+      // Get recent lifecycle events
+      const { data: eventData, error: eventError } = await supabase
+        .from("asset_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      if (eventError) {
+        console.error("Activity loading error:", eventError);
+      }
+
+      const events = eventData || [];
+
+      // Connect each event to its asset
+      const activity = events.map((event) => {
+        const matchingAsset = allAssets.find(
+          (asset) => asset.id === event.asset_id
+        );
+
+        return {
+          id: matchingAsset?.proven_id || "Unknown",
+          asset: matchingAsset?.name || "Unknown asset",
+          detail: event.description || event.title,
+          event: event.title,
+          time: new Date(event.created_at).toLocaleString(),
+        };
+      });
+
+      setRecentActivity(activity);
+
+      setLoading(false);
     };
 
-    checkUser();
+    loadDashboard();
   }, [router]);
 
-  const stats = [
-    { label: "Total assets", value: "128" },
-    { label: "Active", value: "94" },
-    { label: "Under maintenance", value: "12" },
-    { label: "Needs attention", value: "6" },
-  ];
-
-  const recentActivity = [
-    {
-      id: "PRV-8F42A",
-      asset: "Canon EOS R6",
-      event: "Returned",
-      detail: "Minor scratch recorded",
-      time: "12 min ago",
-    },
-    {
-      id: "PRV-31KD7",
-      asset: "Sony FX3",
-      event: "Rented",
-      detail: "Condition verified",
-      time: "1 hr ago",
-    },
-    {
-      id: "PRV-92LM4",
-      asset: "DJI RS 3 Pro",
-      event: "Serviced",
-      detail: "Routine maintenance completed",
-      time: "3 hrs ago",
-    },
-    {
-      id: "PRV-17QXA",
-      asset: "MacBook Pro 16",
-      event: "Inspection",
-      detail: "Battery condition recorded",
-      time: "Yesterday",
-    },
-  ];
+    const stats = [
+      {
+        label: "Total assets",
+        value: assetCount,
+      },
+      {
+        label: "Active",
+        value: activeCount,
+      },
+      {
+        label: "Under maintenance",
+        value: maintenanceCount,
+      },
+      {
+        label: "Needs attention",
+        value: attentionCount,
+      },
+    ];
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
@@ -171,15 +236,25 @@ export default function Dashboard() {
                   </p>
                 </div>
 
-                <button className="text-sm text-blue-400 hover:text-blue-300">
+                <button 
+                  onClick={() => (window.location.href = "/assets")}
+                  className="text-sm text-blue-400 hover:text-blue-300"
+                >
                   View all
                 </button>
               </div>
 
               <div className="divide-y divide-white/10">
-                {recentActivity.map((activity) => (
+                {recentActivity.length === 0 ? (
+                  <div className="px-6 py-8">
+                    <p className="text-sm text-slate-500">
+                      No recent activity yet.
+                    </p>
+                  </div>
+                ) : (
+                  recentActivity.map((activity, index) => (
                   <div
-                    key={activity.id}
+                    key={`${activity.id}-${activity.time}-${index}`}
                     className="flex items-center justify-between gap-4 px-6 py-5"
                   >
                     <div className="flex min-w-0 items-center gap-4">
@@ -205,9 +280,10 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
-                ))}
-              </div>
+                ))
+              )}  
             </div>
+          </div>
 
             {/* Quick actions */}
             <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
@@ -259,22 +335,31 @@ export default function Dashboard() {
                 </p>
 
                 <h2 className="mt-2 text-xl font-bold">
-                  PRV-8F42A
+                  {assets[0]?.proven_id || "No assets yet"}
                 </h2>
 
                 <p className="mt-1 text-slate-400">
-                  Canon EOS R6
+                  {assets[0]?.name || "Create your first asset to see it here."}
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="rounded-lg bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-400">
-                  Active
-                </span>
+                {assets[0] && (
+                  <>
+                    <span className="rounded-lg bg-emerald-400/10 px-3 py-1.5 text-sm text-emerald-400">
+                      {assets[0].status}
+                    </span>
 
-                <button className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/5">
-                  View asset
-                </button>
+                    <button
+                      onClick={() =>
+                        (window.location.href = `/assets/${assets[0].proven_id}`)
+                      }
+                      className="rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/5"
+                    >
+                      View asset
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>

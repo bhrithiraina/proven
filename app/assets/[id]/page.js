@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "../../../lib/supabase";
+import QRCode from "qrcode";
 
 export default function AssetDetail() {
   const params = useParams();
@@ -12,6 +13,13 @@ export default function AssetDetail() {
   const [events, setEvents] = useState([]);
   const [evidence, setEvidence] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [qrCode, setQrCode] = useState(null);
+  const [generatingQr, setGeneratingQr] = useState(false);
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [eventType, setEventType] = useState("inspection");
+  const [eventTitle, setEventTitle] = useState("");
+  const [eventDescription, setEventDescription] = useState("");
+  const [addingEvent, setAddingEvent] = useState(false);
 
   useEffect(() => {
     const loadAsset = async () => {
@@ -79,6 +87,64 @@ export default function AssetDetail() {
   }
 
 const currentAsset = asset;
+
+  const handleAddEvent = async () => {
+    if (!eventTitle.trim()) {
+      alert("Please enter an event title.");
+      return;
+    }
+
+    setAddingEvent(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert("Please sign in first.");
+        window.location.href = "/login";
+        return;
+      }
+
+      const { error } = await supabase
+        .from("asset_events")
+        .insert({
+          asset_id: currentAsset.id,
+          user_id: user.id,
+          event_type: eventType,
+          title: eventTitle.trim(),
+          description: eventDescription.trim() || null,
+        });
+
+      if (error) {
+        console.error(error);
+        alert(error.message);
+        return;
+      }
+
+      const { data: updatedEvents, error: reloadError } = await supabase
+        .from("asset_events")
+        .select("*")
+        .eq("asset_id", currentAsset.id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (reloadError) {
+        console.error(reloadError);
+        return;
+      }
+
+      setEvents(updatedEvents || []);
+
+      setEventType("inspection");
+      setEventTitle("");
+      setEventDescription("");
+      setShowEventForm(false);
+    } finally {
+      setAddingEvent(false);
+    }
+  };
 
   const handleAddEvidence = async (event) => {
     const file = event.target.files?.[0];
@@ -163,6 +229,31 @@ const currentAsset = asset;
     } finally {
       setUploading(false);
       event.target.value = "";
+    }
+  };
+
+  const handleGenerateQr = async () => {
+    setGeneratingQr(true);
+
+    try {
+      const baseUrl =
+        window.location.hostname === "localhost"
+          ? "http://192.168.0.4:3000"
+          : window.location.origin;
+
+      const passportUrl = `${baseUrl}/passport/${currentAsset.public_token}`;
+
+      const qrDataUrl = await QRCode.toDataURL(passportUrl, {
+        width: 300,
+        margin: 2,
+      });
+
+      setQrCode(qrDataUrl);
+    } catch (error) {
+      console.error(error);
+      alert("Could not generate QR code.");
+    } finally {
+      setGeneratingQr(false);
     }
   };
 
@@ -263,8 +354,29 @@ const currentAsset = asset;
               >
                 Edit asset
               </button>
+
+              <button
+                onClick={handleGenerateQr}
+                className="rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-400"
+              >
+                {generatingQr ? "Generating..." : "Generate QR"}
+              </button>
             </div>
           </div>
+
+          {qrCode && (
+            <div className="mt-6 flex flex-col items-center rounded-2xl border border-white/10 bg-white p-6 sm:w-fit">
+              <img
+                src={qrCode}
+                alt={`QR code for ${currentAsset.proven_id}`}
+                className="h-64 w-64"
+              />
+
+              <p className="mt-4 text-center text-sm font-medium text-slate-900">
+                Scan to view public passport
+              </p>
+            </div>
+          )}
 
           {/* Overview cards */}
           <div className="mt-10 grid gap-4 md:grid-cols-3">
@@ -316,14 +428,91 @@ const currentAsset = asset;
             {/* Timeline */}
             <div className="rounded-2xl border border-white/10 bg-slate-900 lg:col-span-2">
               <div className="border-b border-white/10 px-6 py-5">
-                <h2 className="font-semibold">
-                  Lifecycle history
-                </h2>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="font-semibold">
+                      Lifecycle history
+                    </h2>
 
-                <p className="mt-1 text-sm text-slate-500">
-                  A complete record of events associated with this asset.
-                </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                      A complete record of events associated with this asset.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => setShowEventForm(!showEventForm)}
+                    className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-slate-300 transition hover:bg-white/5"
+                  >
+                    {showEventForm ? "Cancel" : "+ Add event"}
+                  </button>
+                </div>
               </div>
+
+              {showEventForm && (
+                <div className="border-b border-white/10 p-6">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5">
+                    <h3 className="font-semibold">
+                      Add lifecycle event
+                    </h3>
+
+                    <div className="mt-5 space-y-4">
+                      <div>
+                        <label className="text-sm text-slate-400">
+                          Event type
+                        </label>
+
+                        <select
+                          value={eventType}
+                          onChange={(e) => setEventType(e.target.value)}
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none"
+                        >
+                          <option value="inspection">Inspection</option>
+                          <option value="rental">Rented</option>
+                          <option value="return">Returned</option>
+                          <option value="service">Serviced</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-sm text-slate-400">
+                          Title
+                        </label>
+
+                        <input
+                          value={eventTitle}
+                          onChange={(e) => setEventTitle(e.target.value)}
+                          placeholder="e.g. Returned after rental"
+                          className="mt-2 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-sm text-slate-400">
+                          Description
+                        </label>
+
+                        <textarea
+                          value={eventDescription}
+                          onChange={(e) => setEventDescription(e.target.value)}
+                          placeholder="Add details about what happened..."
+                          rows={4}
+                          className="mt-2 w-full resize-none rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm text-white outline-none placeholder:text-slate-600"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleAddEvent}
+                        disabled={addingEvent}
+                        className="w-full rounded-xl bg-blue-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {addingEvent ? "Adding event..." : "Add event"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="p-6">
                 <div className="space-y-8">
@@ -349,20 +538,20 @@ const currentAsset = asset;
                             <span className="text-xs text-slate-500">
                               {new Date(event.created_at).toLocaleString()}
                             </span>
-                          </div>
-
-                          {event.description && (
-                            <p className="mt-2 text-sm leading-6 text-slate-400">
-                              {event.description}
-                            </p>
-                          )}
                         </div>
+
+                        {event.description && (
+                          <p className="mt-2 text-sm leading-6 text-slate-400">
+                            {event.description}
+                          </p>
+                        )}
                       </div>
-                    ))
-                  )}
-                </div>    
+                    </div>
+                  ))
+                )}
               </div>
             </div>
+          </div>
 
             {/* Evidence */}
             <div className="rounded-2xl border border-white/10 bg-slate-900 p-6">
