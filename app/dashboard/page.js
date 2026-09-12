@@ -301,12 +301,18 @@ export default function Dashboard() {
                   + Create an asset
                 </button>
 
-                <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-left text-sm font-medium text-slate-300 hover:bg-white/5">
+                <button 
+                  onClick={() => (window.location.href = "/assets")}
+                  className="w-full rounded-xl border border-white/10 px-4 py-3 text-left text-sm font-medium text-slate-300 hover:bg-white/5"
+                >
                   Record an inspection
                 </button>
 
-                <button className="w-full rounded-xl border border-white/10 px-4 py-3 text-left text-sm font-medium text-slate-300 hover:bg-white/5">
-                  Add evidence
+                <button 
+                    onClick={() => (window.location.href = "/assets")}
+                    className="w-full rounded-xl border border-white/10 px-4 py-3 text-left text-sm font-medium text-slate-300 hover:bg-white/5"
+                >
+                    Add evidence
                 </button>
               </div>
 

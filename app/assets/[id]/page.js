@@ -236,12 +236,8 @@ const currentAsset = asset;
     setGeneratingQr(true);
 
     try {
-      const baseUrl =
-        window.location.hostname === "localhost"
-          ? "http://192.168.0.4:3000"
-          : window.location.origin;
 
-      const passportUrl = `${baseUrl}/passport/${currentAsset.public_token}`;
+      const passportUrl = `${window.location.origin}/passport/${currentAsset.public_token}`;
 
       const qrDataUrl = await QRCode.toDataURL(passportUrl, {
         width: 300,
