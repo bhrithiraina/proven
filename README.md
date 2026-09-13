@@ -168,6 +168,9 @@ The passport provides a clear record of:
 proven/
 │
 ├── app/
+│   ├── activity/
+│   │   └── page.js
+│   │
 │   ├── dashboard/
 │   │   └── page.js
 │   │
@@ -189,6 +192,10 @@ proven/
 │   │   └── [token]/
 │   │       └── page.js
 │   │
+│   ├── settings/
+│   │   └── page.js
+│   │
+│   ├── favicon.ico
 │   ├── globals.css
 │   ├── layout.js
 │   └── page.js
