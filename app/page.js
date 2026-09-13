@@ -2,28 +2,61 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       {/* Navigation */}
-      <nav className="flex items-center justify-between border-b border-white/10 px-8 py-5">
-        <div className="text-2xl font-bold tracking-tight">
-          PROVEN<span className="text-blue-400">.</span>
-        </div>
+<nav className="border-b border-white/10 px-5 py-5 sm:px-8">
+  <div className="flex items-center justify-between">
+    <div className="text-2xl font-bold tracking-tight">
+      PROVEN<span className="text-blue-400">.</span>
+    </div>
 
-        <div className="flex items-center gap-6 text-sm text-slate-300">
-          <a href="#how-it-works" className="hover:text-white">
-            How it works
-          </a>
+    {/* Desktop navigation */}
+    <div className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
+      <a href="#how-it-works" className="hover:text-white">
+        How it works
+      </a>
 
-          <a href="#business" className="hover:text-white">
-            For businesses
-          </a>
+      <a href="#business" className="hover:text-white">
+        For businesses
+      </a>
 
-          <a
-            href="/login"
-            className="rounded-lg bg-white px-4 py-2 font-medium text-slate-900 hover:bg-slate-200"
-          >
-            Get started
-          </a>
-        </div>
-      </nav>
+      <a
+        href="/login"
+        className="rounded-lg bg-white px-4 py-2 font-medium text-slate-900 hover:bg-slate-200"
+      >
+        Get started
+      </a>
+    </div>
+
+    {/* Mobile navigation */}
+    <details className="relative md:hidden">
+      <summary className="cursor-pointer list-none rounded-lg border border-white/10 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-white/5">
+        Menu
+      </summary>
+
+      <div className="absolute right-0 z-50 mt-3 w-52 rounded-xl border border-white/10 bg-slate-900 p-2 shadow-xl">
+        <a
+          href="#how-it-works"
+          className="block rounded-lg px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+        >
+          How it works
+        </a>
+
+        <a
+          href="#business"
+          className="block rounded-lg px-4 py-3 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
+        >
+          For businesses
+        </a>
+
+        <a
+          href="/login"
+          className="mt-1 block rounded-lg bg-white px-4 py-3 text-center text-sm font-medium text-slate-900 hover:bg-slate-200"
+        >
+          Get started
+        </a>
+      </div>
+    </details>
+  </div>
+</nav>
 
       {/* Hero */}
       <section className="mx-auto max-w-6xl px-8 pb-24 pt-28">
