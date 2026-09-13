@@ -82,14 +82,14 @@ export default function AssetsPage() {
             </a>
 
             <a
-              href="#"
+              href="/activity"
               className="block rounded-lg px-4 py-3 text-sm text-slate-400 hover:bg-white/5 hover:text-white"
             >
               Activity
             </a>
 
             <a
-              href="#"
+              href="/settings"
               className="block rounded-lg px-4 py-3 text-sm text-slate-400 hover:bg-white/5 hover:text-white"
             >
               Settings
