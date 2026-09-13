@@ -11,12 +11,17 @@ export default function Home() {
           <a href="#how-it-works" className="hover:text-white">
             How it works
           </a>
+
           <a href="#business" className="hover:text-white">
             For businesses
           </a>
-          <button className="rounded-lg bg-white px-4 py-2 font-medium text-slate-900 hover:bg-slate-200">
+
+          <a
+            href="/login"
+            className="rounded-lg bg-white px-4 py-2 font-medium text-slate-900 hover:bg-slate-200"
+          >
             Get started
-          </button>
+          </a>
         </div>
       </nav>
 
@@ -41,13 +46,19 @@ export default function Home() {
           </p>
 
           <div className="mt-9 flex flex-wrap gap-4">
-            <button className="rounded-xl bg-blue-500 px-6 py-3 font-semibold hover:bg-blue-400">
+            <a
+              href="/assets/new"
+              className="rounded-xl bg-blue-500 px-6 py-3 font-semibold hover:bg-blue-400"
+            >
               Create an asset
-            </button>
+            </a>
 
-            <button className="rounded-xl border border-white/15 px-6 py-3 font-semibold text-slate-300 hover:bg-white/5">
+            <a
+              href="#how-it-works"
+              className="rounded-xl border border-white/15 px-6 py-3 font-semibold text-slate-300 hover:bg-white/5"
+            >
               See how it works
-            </button>
+            </a>
           </div>
         </div>
       </section>
@@ -174,9 +185,12 @@ export default function Home() {
           your business manages.
         </p>
 
-        <button className="mt-8 rounded-xl bg-blue-500 px-7 py-3 font-semibold hover:bg-blue-400">
+        <a
+          href="/login"
+          className="mt-8 inline-block rounded-xl bg-blue-500 px-7 py-3 font-semibold hover:bg-blue-400"
+        >
           Start with PROVEN
-        </button>
+        </a>
       </section>
 
       {/* Footer */}
